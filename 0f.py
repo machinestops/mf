@@ -13,13 +13,17 @@
 
 import sys
 
+org = 0x400000
+print(org.to_bytes(8, 'big').hex())
 D = {} # dictionary
 M = {} # macros
-B = []
+B = bytearray()
 
-def parse(w):
-    if w != '$$' and w.startswith('$'):
-        B.append(bytes.fromhex(w[1:]))
+def parse(w, B):
+    if w == '$here':
+        B += (org + len(B)).to_bytes(8, 'little')
+    elif w.startswith('$'):
+        B += bytes.fromhex(w[1:])
     elif w.startswith(':'):
         D[w[1:]] = len(B)
     elif w != '%%' and w.startswith('%'):
@@ -29,15 +33,13 @@ def parse(w):
     else:
         if w in M:
             for n in M[w]:
-                parse(n)
-            
-        
+                parse(n, B)
 
 I = " ".join(filter(lambda x: not x.startswith("\\"), sys.stdin.readlines())).replace('\n',' ').split()
 I = iter(I)
 for w in I:
-    parse(w)
-print(M)
-print(D)
+    parse(w,B)
 
-open("a.out", 'wb').write(b''.join(B))
+#print(B)
+
+open("a.out", 'wb').write(B)

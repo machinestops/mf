@@ -3,38 +3,57 @@
 %zw $0000 %%   %zd zw zw %%   %zq zd zd %%
 
 \ 'ELF', then 64bit, LE, v1, sysv
-%magic $7F454c46 %%   %machine $02010100 %%   %pad zq %%
+%magic $7F454c46 %%
+%machine $02010100 %%
+%pad zq %%
 %e_ident magic machine pad %%
 
-ET_exec, 64bit, version current
-%e_type  $02 %%  %e_machine $003e %%   %e_version $0001 %%
+\ ET_exec, 64bit, version current
+%e_type  $02 %%
+%e_machine $003e %%
+%e_version $0001 %%
 
 \ entrypoint goes here. this thing will be rough
 %e_entry $0000008600400000 %%
 
 \ program header offset, placeholder
-%e_phoff  zw $0040 zd  %%
+%e_phoff  $0000004000000000  %%
 %e_shoff     zq     %%
 %e_flags     zd     %%
+
 \ header size, placeholder. value of total elf header size. placeholder, static?
-%e_ehsize    $4000     %%
+%e_ehsize    $0040  %%
+
 \ elf program entry size in bytes. should be static?
-%e_phentsize zw     %%
+%e_phentsize $0038     %%
+
 \ we will always have one program header, so phnum is always 1
 %e_phnum     $0001  %%
+
 \ no sections, so all of this is irrelevant.
 %e_shentsize zw %%   %e_shnum zw %%    %e_shstrndx zw %%
 
+\ zw here. idk why. alignment is weird
 %elf_header
     e_ident e_type e_machine e_version
-    e_entry e_phoff e_shoff e_flags
+    e_entry e_phoff e_shoff e_flags $0000
     e_ehsize e_phentsize e_phnum
     e_shentsize e_shnum e_shstrndx
 %%
+\ my alignment here is really messed up
 
-%p_type  zw $0001 %%   %p_flags zw $0007 %%   %p_offset zq %%
-p_vaddr p_filesz p_memsz p_align
-%phdr %%
+%p_type  $0001 %%
+%p_flags zw $0007 %%
+%p_offset zq %%
+%p_vaddr  $0000000000400000 %%
+%p_paddr  $0000000000400000 %%
+%p_filesz $0000009f00000000 %%
+%p_memsz  $0000009f00000000 %%
+%p_align  zd $1000 %%
 
-elf_header
+%phdr p_type p_flags p_offset p_vaddr p_paddr p_filesz p_memsz p_align %%
 
+\ technically a hello world
+elf_header phdr
+$000000000048656c6c6f2c20576f726c64210a6a015889c78d35e7ffffff6a0e5a0f05b83c00000031ff0f05
+\ zq zq zq zq zq zd
