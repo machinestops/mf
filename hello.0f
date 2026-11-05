@@ -1,0 +1,40 @@
+\ adaptation of https://blog.lohr.dev/smol-hello-world
+
+%zw $0000 %%   %zd zw zw %%   %zq zd zd %%
+
+\ 'ELF', then 64bit, LE, v1, sysv
+%magic $7F454c46 %%   %machine $02010100 %%   %pad zq %%
+%e_ident magic machine pad %%
+
+ET_exec, 64bit, version current
+%e_type  $02 %%  %e_machine $003e %%   %e_version $0001 %%
+
+\ entrypoint goes here. this thing will be rough
+%e_entry $0000008600400000 %%
+
+\ program header offset, placeholder
+%e_phoff  zw $0040 zd  %%
+%e_shoff     zq     %%
+%e_flags     zd     %%
+\ header size, placeholder. value of total elf header size. placeholder, static?
+%e_ehsize    $4000     %%
+\ elf program entry size in bytes. should be static?
+%e_phentsize zw     %%
+\ we will always have one program header, so phnum is always 1
+%e_phnum     $0001  %%
+\ no sections, so all of this is irrelevant.
+%e_shentsize zw %%   %e_shnum zw %%    %e_shstrndx zw %%
+
+%elf_header
+    e_ident e_type e_machine e_version
+    e_entry e_phoff e_shoff e_flags
+    e_ehsize e_phentsize e_phnum
+    e_shentsize e_shnum e_shstrndx
+%%
+
+%p_type  zw $0001 %%   %p_flags zw $0007 %%   %p_offset zq %%
+p_vaddr p_filesz p_memsz p_align
+%phdr %%
+
+elf_header
+
