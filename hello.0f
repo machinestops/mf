@@ -1,4 +1,5 @@
-%zw $0000 ;   %zd zw zw ;   %zq zd zd ;
+\ zero word, dword, qword
+%zw $0000 ; %zd zw zw ; %zq zd zd ;
 
 \ derivative work of https://blog.lohr.dev/smol-hello-world
 \ see man 5 elf
@@ -7,20 +8,19 @@
 %magic $7F 'ELF ; %machine $02010100 ; %pad zq ;
 %e_ident magic machine pad ;
 
-
-%e_type $0200 ; 
-%e_machine $3e00 ; 
-%e_version zd ; 
-%e_entry &main ; 
-%e_phoff $4000 zw zd ; 
-%e_shoff zq ; 
-%e_flags zd ; 
-%e_ehsize $4000 ; 
-%e_phentsize $3800 ; 
-%e_phnum $0100 ; 
-%e_shentsize zw ; 
-%e_shnum zw ; 
-%e_shstrndx zw ; 
+%e_type       $0200 ; 
+%e_machine    $3e00 ; 
+%e_version    zd ; 
+%e_entry      &main ; 
+%e_phoff      $4000 zw zd ; 
+%e_shoff      zq ; 
+%e_flags      zd ; 
+%e_ehsize     $4000 ; 
+%e_phentsize  $3800 ; 
+%e_phnum      $0100 ; 
+%e_shentsize  zw ; 
+%e_shnum      zw ; 
+%e_shstrndx   zw ; 
 
 %elf_header
     e_ident e_type e_machine e_version
@@ -28,42 +28,45 @@
     e_ehsize e_phentsize e_phnum
     e_shentsize e_shnum e_shstrndx ;
                
-%p_type  $0100 zw ;
-%p_flags $0700 zw ;
-%p_offset zq ;
-%p_vaddr  zw $4000 zd ;
-%p_paddr  zw $4000 zd ;
-%p_filesz !size  ;
-%p_memsz  !size  ;
-%p_align  $0010 zw zd ;
+%p_type     $0100 zw ;
+%p_flags    $0700 zw ;
+%p_offset   zq ;
+%p_vaddr    zw $4000 zd ;
+%p_paddr    zw $4000 zd ;
+%p_filesz   !size  ;
+%p_memsz    !size  ;
+%p_align    $0010 zw zd ;
 
-%phdr 
-    p_type p_flags p_offset
-    p_vaddr p_paddr p_filesz p_memsz p_align ;
+%phdr p_type p_flags p_offset
+      p_vaddr p_paddr p_filesz p_memsz p_align ;
 
 elf_header phdr
 
 \ assembly instructions
-%syscall $0f05 ;
-%movrax_i $b8 ;
-%movrdi_i $bf ;
-%movrdx_i $ba ;
+%syscall  $0f05 ;
+%moveax_i $b8 ;
+%movedi_i $bf ;
+%movedx_i $ba ;
+%movesi_i $be ;
+
+%mov_rdi $48be ;
 
 \ system calls
-%exit  movrax_i $3c00 zw
-       movrdi_i zd
+\ RDI, RSI, RDX, RCX, R8, R9 arg order
+
+%exit  moveax_i $3c00 zw
+       movedi_i zd
        syscall ;
 
-\ hello world in ascii
+\ sys_write (fd, buf, count) <- rdi, rsi, rdx
+
 
 :string 'Hello, $20 'corld! $0a
 
-:main
-movrax_i $0100 zw
-movrdi_i $0100 zw
-\ lea rsi, [rel msg]
-\ lea instructions are going to be complicated to implement here
-$488D35E1FFFFFF 
-movrdx_i $0e00 zw
-syscall
+:main 
+    moveax_i $0100 zw
+    movedi_i $0100 zw
+    mov_rdi &string
+    movedx_i $0e00 zw
+    syscall
 exit
