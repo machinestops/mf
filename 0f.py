@@ -34,7 +34,7 @@ def parse(w, B):
     elif w.startswith(':'):
         # define a label/word
         D[w[1:]] = len(B)
-    elif w != '%%' and w.startswith('%'):
+    elif w.startswith('%'):
         M[n := w[1:]] = []
         while (w := next(I)) != ';':
             M[n].append(w)
@@ -42,6 +42,8 @@ def parse(w, B):
         # take the address and fill it in later
         L[len(B)] = w[1:]
         B += 0xdeadbeefdeadbeef.to_bytes(8, 'little')
+    elif w.startswith('\''):
+        B+= bytes(w[1:], "utf-8")
     else:
         if w in M:
             for n in M[w]:
