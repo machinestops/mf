@@ -42,17 +42,21 @@
 
 elf_header phdr
 
-\ assembly instructions
+\ assembly instructions. _i for 32bit, _a for 64bit. fix later
 %syscall  $0f05 ;
 %moveax_i $b8 ;
 %movedi_i $bf ;
 %movedx_i $ba ;
 %movesi_i $be ;
 
-%mov_rdi $48be ;
+%movrdi_a $48be ;
+%movrbp_a $48bd ;
+
+%add_b $4883C5 ;
 
 \ system calls
 \ RDI, RSI, RDX, RCX, R8, R9 arg order
+
 
 %exit  moveax_i $3c00 zw
        movedi_i zd
@@ -66,7 +70,80 @@ elf_header phdr
 :main 
     moveax_i $0100 zw
     movedi_i $0100 zw
-    mov_rdi &string
+    movrdi_a &string
     movedx_i $0e00 zw
     syscall
 exit
+
+
+\ no stinking loops
+%8qw zq zq zq zq zq zq zq zq ;
+
+:stack zq
+\    8qw 8qw 8qw 8qw
+\    8qw 8qw 8qw 8qw
+
+%@stack push &stack ;
+
+\ RDI is TOS RSI is 2OS stack in EBP
+%prelude movrbp_a &stack ;
+
+%push
+    \ mov [rbp+0x0],rsi
+    $48897D00
+    add_b $08
+    \ mov rsi, rdi
+    $4889FE
+    movrdi_a ;
+
+push &stack
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

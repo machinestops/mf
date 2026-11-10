@@ -1,0 +1,36 @@
+%magic $7F 'ELF ; %machine $02010100 ; %pad zq ;
+%e_ident magic machine pad ;
+
+%e_type       $0200 ; 
+%e_machine    $3e00 ; 
+%e_version    zd ; 
+%e_entry      &main ; 
+%e_phoff      $4000 zw zd ; 
+%e_shoff      zq ; 
+%e_flags      zd ; 
+%e_ehsize     $4000 ; 
+%e_phentsize  $3800 ; 
+%e_phnum      $0100 ; 
+%e_shentsize  zw ; 
+%e_shnum      zw ; 
+%e_shstrndx   zw ; 
+
+%elf_header
+    e_ident e_type e_machine e_version
+    e_entry e_phoff e_shoff e_flags
+    e_ehsize e_phentsize e_phnum
+    e_shentsize e_shnum e_shstrndx ;
+               
+%p_type     $0100 zw ;
+%p_flags    $0700 zw ;
+%p_offset   zq ;
+%p_vaddr    zw $4000 zd ;
+%p_paddr    zw $4000 zd ;
+%p_filesz   !size  ;
+%p_memsz    !size  ;
+%p_align    $0010 zw zd ;
+
+%phdr p_type p_flags p_offset
+      p_vaddr p_paddr p_filesz p_memsz p_align ;
+
+elf_header phdr
