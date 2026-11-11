@@ -40,69 +40,96 @@
 %phdr p_type p_flags p_offset
       p_vaddr p_paddr p_filesz p_memsz p_align ;
 
-elf_header phdr
+elf_header phdr $00
 
 \ assembly instructions. _i for 32bit, _a for 64bit. fix later
+%nop $90 ;
 %syscall  $0f05 ;
 %moveax_i $b8 ;
 %movedi_i $bf ;
 %movedx_i $ba ;
 %movesi_i $be ;
 
-%movrdi_a $48be ;
+%movrdi_a $48bf ;
 %movrbp_a $48bd ;
+%movrsi_a $48be ;
 
-%add_b $4883C5 ;
+%addrbp_b  $4883C5 ;
+%subrbp_b  $4883ED ;
+%push_b    $6a ;
+%push_a    $68 ;
+%movedx,eax $89C2 ;
+
 
 \ system calls
 \ RDI, RSI, RDX, RCX, R8, R9 arg order
-
+\ sys_write (fd, buf, count) <- rdi, rsi, rdx
+\ read(fd, buf, count)
+\ RDI is TOS RSI is 2OS stack in EBP
 
 %exit  moveax_i $3c00 zw
        movedi_i zd
        syscall ;
+       
+%8qw zq zq zq zq zq zq zq zq ;
 
-\ sys_write (fd, buf, count) <- rdi, rsi, rdx
 
 
-:string 'Hello, $20 'corld! $0a
+       
+%prelude nop movrbp_a &stack ;
 
-:main 
-    moveax_i $0100 zw
-    movedi_i $0100 zw
-    movrdi_a &string
-    movedx_i $0e00 zw
+%push/8
+    nop
+    \ mov [rbp+0x0],rsi
+    $48897500
+    $4883C508
+    \ mov rsi, rdi
+    $4889FE
+    nop
+    movrdi_a ;
+
+%push/4
+    nop
+    \ mov [rbp+0x0],rsi
+    $48897500
+    $4883C508
+    \ mov rsi, rdi
+    $4889FE
+    \ encoding breaks down without this noop
+    nop
+    movedi_i ;
+
+:main
+    nop
+    prelude
+    moveax_i $0000 zw 
+    push/4 $0500 zw
+    push/8 &inbuf
+    push/4 $0100 zw
     syscall
-exit
+    movedx,eax
+    moveax_i $0100 zw
+    syscall
+    exit
+
+
+:inbuf
+    8qw 8qw 8qw 8qw
+    8qw 8qw 8qw 8qw
+
+:stack 8qw 8qw 8qw 8qw
+
+
+
+
+
 
 
 \ no stinking loops
-%8qw zq zq zq zq zq zq zq zq ;
 
-:stack zq
-\    8qw 8qw 8qw 8qw
-\    8qw 8qw 8qw 8qw
+
 
 %@stack push &stack ;
-
-\ RDI is TOS RSI is 2OS stack in EBP
-%prelude movrbp_a &stack ;
-
-%push
-    \ mov [rbp+0x0],rsi
-    $48897D00
-    add_b $08
-    \ mov rsi, rdi
-    $4889FE
-    movrdi_a ;
-
-push &stack
-
-
-
-
-
-
 
 
 
