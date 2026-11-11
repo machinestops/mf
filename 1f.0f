@@ -1,70 +1,17 @@
-\ 0f assembler in 0f - 1f
-\ features are the same as shell/python version
-\ one line
-\ %macro ... code ...  %% 
-\ macros cannot be defined in macros
-\ :label code
-\ labels are compile-time only
-\ inserts a "call" instruction
+\ 1f.0f
+\ stage 1 of mf - macro-expansion based assembler
+\ %moveax $b8 ; - define macro moveax to expand to $b8
+\ macros are 'late binding' - stored as text, parsed when invoked
+\ :label defines a label. currently using a defined label does nothing
+\ can use & to generate the address for it. can forward reference for this.
+\ unfulfilled forward references are replaced with dead beef.
+\ !size inserts the size of the program when complete.
+\ four data structures are needed for this program:
+\ input buffer, output buffer, dictionary, correction buffer
 
-\ --- data structures ---
-\ input buffer - 24kb
-\ self explanatory. contains the input program text. persistent
-
-\ output buffer - 24kb
-\ these are small because the programs written in 0f should not be large
-\ 1f really should only be used to write hello world and 1f.0f 
-
-\ dict - 24kb
-\ dict is NOT a linked list. static size
-\ dict entry consists of string length (byte), name address (word), code address (word). stored as offset into input buffer or output buffer.
-\ name addresses are stored as offsets into the input buffer
-\ one byte before each name address will be '%' or ':'. this will determine the execution behavuour
-
-\ words for compiling empty space into the program
-\ how to loop without loops
-
-%4z $0000 $0000 %%
-%16z 4z 4z 4z 4z %%
-%64z 16z 16z 16z 16z %%
-%256z 64z 64z 64z %%
-
-\ one kilozero
-%1kz 256z 256z 256z 256z %%
-%4kz 1kz 1kz 1kz 1kz %%
-%24kz 4kz 4kz 4kz 4kz 4kz 4kz %%
-
-\ $$ is a placeholder for source location. i think this works
-
-:dict push $$ ; 24kz
-:inb  push $$ ; 24kz
-:outb push $$ ; 24kz
-\ output will need to be dynamically allocated in the actual program
-
-
-\ != = should only consume TOS and set the conditional flag maybe?
-\ +; exit if condition flag is true
-\ -; exit if condition flag is false
-\ _ before a word indicates it deals in bytes rather than words
-
-\ assumes b is inb
-
-\ as long as you're seeing a space, iterate
-:wl _b@+ push $20 != +; wl ;
-:word b wl b over - swap ;
-
-\ searches dict and returns dict entry
-:search ;
-
-\ takes a word, performs the corresponding action
-\ def? and parse might be mutually recursive. figure it out? 
-:parse  dup _@ lit? +; macro? +; label? +; def? +; err ;
-
-\ first character
-:macro? push $25 != -; drop push $01 + swap dict _!+ dict !+ inb dict !+ ;
-
-:label? push $3b != -; drop push $01 + swap dict _!+ dict !+ outb dict !+ ;
-
-\ push the length, then the pointer (?) into the input buffer for the name +1 byte (for S= purposes)
-\ then ush the 
-
+:main
+    read-stdin \ read program
+    while word parse end
+    correct
+    writeout
+    exit

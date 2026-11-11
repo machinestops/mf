@@ -1,7 +1,6 @@
 \ zero word, dword, qword
 %zw $0000 ; %zd zw zw ; %zq zd zd ;
 
-\ derivative work of https://blog.lohr.dev/smol-hello-world
 \ see man 5 elf
 
 \ 'ELF', then 64bit, LE, v1, sysv
@@ -42,20 +41,28 @@
 
 elf_header phdr $00
 
-\ assembly instructions. _i for 32bit, _a for 64bit. fix later
+\ assembly instructions
+
 %nop $90 ;
+\ 64bit modifier prefix
+%rex $48 ;
 %syscall  $0f05 ;
-%moveax_i $b8 ;
-%movedi_i $bf ;
-%movedx_i $ba ;
-%movesi_i $be ;
 
-%movrdi_a $48bf ;
-%movrbp_a $48bd ;
-%movrsi_a $48be ;
+\ move 32bit & 64bit immediate into register
 
-%addrbp_b  $4883C5 ;
-%subrbp_b  $4883ED ;
+%moveax $b8 ;    %movrax rex moveax ;
+%movedx $ba ;    %movrdx rex movedx ;
+%movebx $bb ;    %movrbx rex movebx ;
+%movebp $bd ;    %movrbp rex movebp ;
+%movesi $be ;    %movrsi rex movesi ;
+%movedi $bf ;    %movrdi rex movedi ;
+
+%addrbp_b  rex $83C5 ;
+%subrbp_b  rex $83ED ;
+
+%+sp addrbp_b $08 ;
+%-sp subrbp_b $08 ;
+
 %push_b    $6a ;
 %push_a    $68 ;
 %movedx,eax $89C2 ;
@@ -67,70 +74,87 @@ elf_header phdr $00
 \ read(fd, buf, count)
 \ RDI is TOS RSI is 2OS stack in EBP
 
-%exit  moveax_i $3c00 zw
-       movedi_i zd
+%exit  moveax $3c00 zw
+       movedi zd
        syscall ;
-       
-%8qw zq zq zq zq zq zq zq zq ;
+
+%brk moveax $0c00 zw
+     movedi zd 
+     syscall ;
 
 
-
-       
-%prelude nop movrbp_a &stack ;
-
-%push/8
+\ The first three elements of the stack are stored in RDI, RSI, and RDX.
+\ The rest are stored in the pointer pointed to by RBP. 
+\ I added a third register because it's fun.
+%prelude nop movrbp &stack ;
+%push/
     nop
-    \ mov [rbp+0x0],rsi
-    $48897500
-    $4883C508
-    \ mov rsi, rdi
-    $4889FE
-    nop
-    movrdi_a ;
-
-%push/4
-    nop
-    \ mov [rbp+0x0],rsi
-    $48897500
-    $4883C508
+    \ mov [rbp+0x0],rdx
+    $48895500
+    +sp
+    \ mov rdx, rsi
+    $4889F2
     \ mov rsi, rdi
     $4889FE
     \ encoding breaks down without this noop
-    nop
-    movedi_i ;
+    nop ;
 
-:main
-    nop
-    prelude
-    moveax_i $0000 zw 
-    push/4 $0500 zw
-    push/8 &inbuf
-    push/4 $0100 zw
-    syscall
-    movedx,eax
-    moveax_i $0100 zw
-    syscall
-    exit
-
-
-:inbuf
-    8qw 8qw 8qw 8qw
-    8qw 8qw 8qw 8qw
-
-:stack 8qw 8qw 8qw 8qw
-
-
-
-
-
+%push/8 push/ movrdi ;
+%push/4 push/ movedi ;
 
 
 \ no stinking loops
+%8qw zq zq zq zq zq zq zq zq ;
+%1kb 8qw 8qw 8qw 8qw 8qw 8qw 8qw 8qw
+      8qw 8qw 8qw 8qw 8qw 8qw 8qw 8qw ;
+:stack 8qw 8qw 8qw 8qw
+
+\ 4kb statically allocated. TODO: short dynamic allocator using brk.
+:inbuf 8qw
+\ 1kb 1kb 1kb 1kb
+
+\ 'forth' words
+\ Ultimately, I want to write Forth, not assembly.
+
+%drop
+    \ mov rdi, rsi
+    $4889F7
+    \ mov rsi, rdx
+    $4889D6
+    -sp
+    \ mov rdx,[rbp+0x0]
+    $488B5500 
+     ;
+
+%swap
+    \ xchg rsi,rdi
+    $4887FE ;
+
+%sys/3
+    \ "3 parameters ought to be enough for anyone" - bill gates
+    \ mov rax, rdi
+    $4889F8
+    drop
+    syscall
+    push/
+    \ mov rdi, rax
+    $4889C7
+    ;
+    
 
 
+:buf 'Hello $0A
 
-%@stack push &stack ;
-
+:main
+    prelude
+    push/4 $0600 zw
+    push/8 &buf
+    \ 0x1 - stdout
+    push/4 $0100 zw
+    \ 0x1 - sys_write
+    push/4 $0100 zw
+    sys/3
+exit
 
 
 
