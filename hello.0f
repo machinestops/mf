@@ -70,9 +70,6 @@ elf_header phdr $00
 
 \ system calls
 \ RDI, RSI, RDX, RCX, R8, R9 arg order
-\ sys_write (fd, buf, count) <- rdi, rsi, rdx
-\ read(fd, buf, count)
-\ RDI is TOS RSI is 2OS stack in EBP
 
 %exit  moveax $3c00 zw
        movedi zd
@@ -84,8 +81,9 @@ elf_header phdr $00
 
 
 \ The first three elements of the stack are stored in RDI, RSI, and RDX.
-\ The rest are stored in the pointer pointed to by RBP. 
+\ The rest are stored in the stack in RBP. 
 \ I added a third register because it's fun.
+\ RAX is a scrap register.
 %prelude nop movrbp &stack ;
 %push/
     nop
@@ -110,8 +108,7 @@ elf_header phdr $00
 :stack 8qw 8qw 8qw 8qw
 
 \ 4kb statically allocated. TODO: short dynamic allocator using brk.
-:inbuf 8qw
-\ 1kb 1kb 1kb 1kb
+:inbuf 1kb
 
 \ 'forth' words
 \ Ultimately, I want to write Forth, not assembly.
@@ -130,6 +127,7 @@ elf_header phdr $00
     \ xchg rsi,rdi
     $4887FE ;
 
+\ Calls a syscall with up to 3 arguments, and leaves the return code on the stack. Leaves your parameters, other than your syscall number, untouched. 
 %sys/3
     \ "3 parameters ought to be enough for anyone" - bill gates
     \ mov rax, rdi
@@ -139,21 +137,31 @@ elf_header phdr $00
     push/
     \ mov rdi, rax
     $4889C7
-    ;
+;
     
-
-
-:buf 'Hello $0A
-
-:main
-    prelude
-    push/4 $0600 zw
-    push/8 &buf
+%.S
+    \ sys_write (fd, buf, count) <- rdi, rsi, rdx
     \ 0x1 - stdout
     push/4 $0100 zw
     \ 0x1 - sys_write
     push/4 $0100 zw
     sys/3
+;
+
+%read
+    \ read(fd, buf, count)
+    \ 0x0 - stdin
+    push/4 $0000 zw
+    \ 0x0 - sys_read
+    push/4 $0000 zw
+    sys/3
+;
+
+:main
+    prelude
+    push/4 $0100 zw
+    push/8 &inbuf
+    read swap drop swap .S
 exit
 
 
