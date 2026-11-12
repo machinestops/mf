@@ -57,34 +57,27 @@ elf_header phdr $00
 %movesi $be ;    %movrsi rex movesi ;
 %movedi $bf ;    %movrdi rex movedi ;
 
-%addrbp_b  rex $83C5 ;
-%subrbp_b  rex $83ED ;
-
-%+sp addrbp_b $08 ;
-%-sp subrbp_b $08 ;
+\ modify stack pointer
+%+sp $83C5 $08 ;
+%-sp $83ED $08 ;
 
 %push_b    $6a ;
 %push_a    $68 ;
-%movedx,eax $89C2 ;
-
 
 \ system calls
 \ RDI, RSI, RDX, RCX, R8, R9 arg order
 
+\ end program
 %exit  moveax $3c00 zw
        movedi zd
        syscall ;
 
-%brk moveax $0c00 zw
-     movedi zd 
-     syscall ;
+
 
 
 \ The first three elements of the stack are stored in RDI, RSI, and RDX.
-\ The rest are stored in the stack in RBP. 
 \ I added a third register because it's fun.
 \ RAX is a scrap register.
-%prelude nop movrbp &stack ;
 %push/
     nop
     \ mov [rbp+0x0],rdx
@@ -100,7 +93,6 @@ elf_header phdr $00
 %push/8 push/ movrdi ;
 %push/4 push/ movedi ;
 
-
 \ no stinking loops
 %8qw zq zq zq zq zq zq zq zq ;
 %1kb 8qw 8qw 8qw 8qw 8qw 8qw 8qw 8qw
@@ -112,6 +104,10 @@ elf_header phdr $00
 
 \ 'forth' words
 \ Ultimately, I want to write Forth, not assembly.
+\ 0f isn't a very powerful language, and I don't want to write an instruction encoder into it.
+\ It's meant to be reimplemented in itself, and x86_64 encoding is complex!
+\ So, where an instruction will only be used a couple of times, it'll be written in hex with a comment. 
+
 
 %drop
     \ mov rdi, rsi
@@ -120,12 +116,21 @@ elf_header phdr $00
     $4889D6
     -sp
     \ mov rdx,[rbp+0x0]
-    $488B5500 
-     ;
+    $488B5500 ;
 
-%swap
-    \ xchg rsi,rdi
-    $4887FE ;
+\ mov rdi, rsi
+%dup push/ $4889F7 ;
+    
+\ xchg rsi,rdi
+%swap $4887FE ;
+
+\ add rsi, rdi
+%+ $4801FE drop ;
+\ mov rdi,[rdi]
+%@ $488B3F ;
+
+\ mov [rdi], rsi
+%! $488937 drop drop ;
 
 \ Calls a syscall with up to 3 arguments, and leaves the return code on the stack. Leaves your parameters, other than your syscall number, untouched. 
 %sys/3
@@ -136,30 +141,47 @@ elf_header phdr $00
     syscall
     push/
     \ mov rdi, rax
-    $4889C7
-;
-    
-%.S
-    \ sys_write (fd, buf, count) <- rdi, rsi, rdx
-    \ 0x1 - stdout
-    push/4 $0100 zw
-    \ 0x1 - sys_write
-    push/4 $0100 zw
-    sys/3
-;
+    $4889C7 ;
 
-%read
-    \ read(fd, buf, count)
-    \ 0x0 - stdin
-    push/4 $0000 zw
-    \ 0x0 - sys_read
-    push/4 $0000 zw
-    sys/3
+\ For convenience, we'll define 'strings' as buffer count, not count buffer.
+\ This can be modified later by inserting and removing 'swap' invocations.
+
+\ write(1, buf, count)
+%.S push/4 $0100 zw dup sys/3 ;
+
+\ read(0, buf, count)
+%read push/4 $0000 zw dup sys/3 ;
+
+\ Dealing with sys/3 does my head in. An early iteration of allocation:
+\ %alloc push/4 zd brk swap drop + brk ;
+\ Eugh.
+
+:base zq
+:bump zq
+
+%brk@
+    moveax $0c00 zw
+    movedi zd
+    syscall
+    push/
+    \ mov rdi, rax
+    $4889C7 ;
+
+
+\ brk(NULL) - gives current segment
+\ brk(addr) - increases segment by that amounthell
+%brk push/4 $0c00 zw sys/3 ;
+
+\ The stack is pointed to by RBP.
+%prelude nop
+    movrbp &stack
+    brk@ push/8 &base !
+    brk@ push/8 &bump !
 ;
 
 :main
     prelude
-    push/4 $0100 zw
+    push/4 $0A00 zw
     push/8 &inbuf
     read swap drop swap .S
 exit
