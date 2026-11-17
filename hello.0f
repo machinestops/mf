@@ -44,6 +44,7 @@ elf_header phdr $00
 \ assembly instructions
 
 %nop $90 ;
+
 \ 64bit modifier prefix
 %rex $48 ;
 %syscall  $0f05 ;
@@ -74,6 +75,7 @@ elf_header phdr $00
 
 \ no stinking loops
 %8qw zq zq zq zq zq zq zq zq ;
+
 :stack 8qw 8qw 8qw 8qw
 
 \ Variables.
@@ -83,6 +85,8 @@ elf_header phdr $00
 :R0 zq
 \ Default value of the system break.
 :base zq
+\ Name of the file to be written to. 0f uses a.out, so we'll use f.out.
+'f.out
 
 \ 'forth' words
 \ Ultimately, I want to write Forth, not assembly.
@@ -154,41 +158,43 @@ elf_header phdr $00
 \ read(0, buf, count)
 %read push/4 $0000 zw dup sys/3 ;
 
-
-
-
 \ brk(NULL) - gives current segment
 \ brk(addr) - increases segment by that amount
-%brk push/4 $0c00 zw sys/3 ;
+\ %brk push/4 $0c00 zw sys/3 ;
 
-
-%brk@
+%brk
     moveax $0c00 zw
-    movedi zd
     syscall
-    push/
     \ mov rdi, rax
     $4889C7 ;
 
+
+%brk@ push/4 zd brk ;
+%brk+ brk@ + brk ;
 
 \ Dealing with sys/3 does my head in. An early iteration of allocation:
 \ %alloc push/4 zd brk swap drop + brk ;
 \ Eugh.
 
-%alloc brk@ swap over + brk ;
 \ Leaves you with a pointer and without your size. Basically sbrk. 
-
 
 
 \ The stack is pointed to by RBP.
 %prelude
     movrbp &stack
-    brk@ push/8 &base !
 ;
 
 \ This program doesn't have much error checking. Error checking is large and complex.
+
+\ sketch
+\ open -> alloc -> fstat -> alloc -> read -> done
+\ next step? write routine for converting hex to bytes, clean up below code into stack invocations
 :main
-    
+    prelude
+    brk@
+    push/4 $0100 zw brk+
+    exit
+    \ Open argv[1] for reading.
     \ O_RDONLY
     movesi zd
     \mov rdi,[rsp+0x10]
@@ -196,15 +202,7 @@ elf_header phdr $00
     moveax $0200 zw
     \ sys_open(path, flags)
     syscall
-    exit
     
-    
-    
-    
-\    prelude
-\    push/4 $0A00 zw
-\    push/4 $00FF zw alloc
-\    \ read swap drop swap .S
 exit
 
 
