@@ -85,6 +85,7 @@ elf_header phdr $00
 :R0 zq
 \ Default value of the system break.
 :base zq
+:here zq
 \ Name of the file to be written to. 0f uses a.out, so we'll use f.out.
 'f.out
 
@@ -125,13 +126,14 @@ elf_header phdr $00
     $488B5500 ;
 
 \ mov rdi, rsi
-%dup push/ $4889F7 ;
+%dup push/ ;
 
 \ xchg rsi,rdi
 %swap $4887FE ;
 
 \ add rsi, rdi
 %+ $4801FE drop ;
+
 \ mov rdi,[rdi]
 %@ $488B3F ;
 
@@ -160,7 +162,6 @@ elf_header phdr $00
 
 \ brk(NULL) - gives current segment
 \ brk(addr) - increases segment by that amount
-\ %brk push/4 $0c00 zw sys/3 ;
 
 %brk
     moveax $0c00 zw
@@ -169,8 +170,11 @@ elf_header phdr $00
     $4889C7 ;
 
 
+\ brk@ should be a memory fetch rather than a syscall
+
 %brk@ push/4 zd brk ;
-%brk+ brk@ + brk ;
+%brk+ brk@ + brk drop ;
+%alloc brk@ swap brk+ ;
 
 \ Dealing with sys/3 does my head in. An early iteration of allocation:
 \ %alloc push/4 zd brk swap drop + brk ;
@@ -191,18 +195,22 @@ elf_header phdr $00
 \ next step? write routine for converting hex to bytes, clean up below code into stack invocations
 :main
     prelude
-    brk@
-    push/4 $0100 zw brk+
-    exit
     \ Open argv[1] for reading.
     \ O_RDONLY
     movesi zd
-    \mov rdi,[rsp+0x10]
+    \ mov rdi,[rsp+0x10]
     $488B7C2410
-    moveax $0200 zw
     \ sys_open(path, flags)
+    moveax $0200 zw
+
     syscall
-    
+    \ mov rdi, rax
+    $4889C7
+    brk@ swap
+    push/4 $9000 zw brk+
+    \ lstat after allocating
+    moveax $0500 zw
+    syscall
 exit
 
 
