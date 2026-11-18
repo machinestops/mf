@@ -140,6 +140,8 @@ elf_header phdr $00
 \ mov [rdi], rsi
 %! $488937 drop drop ;
 
+
+
 \ Calls a syscall with up to 3 arguments, and leaves the return code on the stack. Leaves your parameters, other than your syscall number, untouched. 
 %sys/3
     \ "3 parameters ought to be enough for anyone" - bill gates
@@ -154,11 +156,8 @@ elf_header phdr $00
 \ For convenience, we'll define 'strings' as buffer count, not count buffer.
 \ This can be modified later by inserting and removing 'swap' invocations.
 
-\ write(1, buf, count)
-%.S push/4 $0100 zw dup sys/3 ;
 
-\ read(0, buf, count)
-%read push/4 $0000 zw dup sys/3 ;
+
 
 \ brk(NULL) - gives current segment
 \ brk(addr) - increases segment by that amount
@@ -202,15 +201,25 @@ elf_header phdr $00
     $488B7C2410
     \ sys_open(path, flags)
     moveax $0200 zw
-
     syscall
     \ mov rdi, rax
     $4889C7
+    \ Allocate space for the lstat struct.
     brk@ swap
     push/4 $9000 zw brk+
+    
     \ lstat after allocating
     moveax $0500 zw
     syscall
+    swap
+    \ 0x30 bytes offset from fstat structure
+    push/4 $3000 zw
+    + @ dup brk@ swap brk+ 
+    \ current stack at this point is  buf, count, fd(0x3)
+    push/4 $0300 zw
+    moveax zd
+    syscall
+
 exit
 
 
