@@ -42,7 +42,7 @@ def parse(w, B):
         # take the address and fill it in later
         L[len(B)] = w[1:]
         B += 0xdeadbeefdeadbeef.to_bytes(8, 'little')
-    elif w.startswith('\''):
+    elif w.lstrip().startswith('\''):
         B+= bytes(w[1:], "utf-8")
     else:
         if w in M:
@@ -68,3 +68,4 @@ print(D)
 print(len(B))
 
 open("a.out", 'wb').write(B)
+
