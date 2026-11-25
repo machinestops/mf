@@ -149,12 +149,16 @@ elf_header phdr $00
 \ xchg rsi,rdi
 %swap $4887FE ;
 
+\ These operations are commutative, so it's easy.
 \ add rsi, rdi
 %+ $4801FE drop ;
+\ and rsi,rdi
+%and $4821FE drop ;
+\ or rsi, rdi 
+%or  $4809FE drop ;
 
 \ mov rdi,[rdi]
 %@ $488B3F ;
-
 \ mov [rdi], rsi ;
 %! $488937 drop drop ;
 
@@ -205,7 +209,7 @@ elf_header phdr $00
 %h->b
     \ mov eax, edi 
     $89f8
-    \ and edi, byte + 0xf
+    \ and edi, byte+0xf
     $83e70f
     \ shr eax, byte + 0x6
     $c1e806
@@ -216,8 +220,13 @@ elf_header phdr $00
     \ add edi, eax
     $01c7 ;
     
-\ c@+ h->b 4 << c@+ h->b and  
-
+\ Convert an ASCII representation of a byte from input into a byte in output. 
+:atob
+    i@+b h->b
+    \ shl rdi,byte 0x4
+    $48C1E704
+    i@+b h->b or
+ret
 
 :main
     \ Initialise the datastack pointer.
@@ -251,7 +260,6 @@ elf_header phdr $00
     \ mov r15,rdi
     $4989ff
     push/8 &outbuf ! 
-    i@+b h->b o!+b
     
 exit
 

@@ -49,7 +49,7 @@ def parse(w, B):
             for n in M[w]:
                 parse(n, B) # can't get too metaprogrammy
 
-I = " ".join(filter(lambda x: not x.startswith("\\"), sys.stdin.readlines())).replace('\n',' ').split()
+I = " ".join(filter(lambda x: not x.lstrip().startswith("\\"), sys.stdin.readlines())).replace('\n',' ').split()
 I = iter(I)
 for w in I:
     parse(w,B)
