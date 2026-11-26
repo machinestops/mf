@@ -32,8 +32,8 @@
 %p_offset   zq ;
 %p_vaddr    zw $4000 zd ;
 %p_paddr    zw $4000 zd ;
-%p_filesz   !size  ;
-%p_memsz    !size  ;
+%p_filesz   &size  ;
+%p_memsz    &size  ;
 %p_align    $0010 zw zd ;
 
 %phdr p_type p_flags p_offset
@@ -87,8 +87,6 @@ elf_header phdr $00
 
 \ no stinking loops
 %8qw zq zq zq zq zq zq zq zq ;
-
-
 
 \ Variables.
 \ Parameter/data stack.
@@ -262,7 +260,9 @@ ret
     push/8 &outbuf ! 
     
 exit
-
+\ The only use of size is a qword value, so by adding a size label at the end, 
+\ we can remove a feature from the language.
+:size
 
 
 
